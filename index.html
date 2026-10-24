@@ -7,8 +7,8 @@
 <meta name="description" content="Interactive companion to 'Modeling Annotator Personas for Reddit Stance Detection': how an annotator's Neutral threshold changes stance labels and the conclusions drawn from them.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,600;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <header class="hero" id="top">
@@ -19,7 +19,8 @@
     <p class="lede-note">Avery, Jack and Michael are made-up names for the paper's annotators A1, A2 and A3.</p>
   </div>
   <div class="hero-stage">
-    <p class="stage-ask">Pick an annotator to see how they labelled the same 1,000 comments</p>
+    <p class="stage-ask"><span class="fig-n">Figure 1.</span>Pick an annotator to see how they labelled the same 1,000 comments.</p>
+    <p class="loading" id="loading">Loading the interactive figure…</p>
     <div class="pcards" role="radiogroup" aria-label="Show the labels of" id="hero-who"></div>
     <ul class="howto" aria-label="How to read the chart">
       <li><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" class="hk-dot"/></svg><span><b>Each dot</b> is one Reddit comment</span></li>
@@ -32,11 +33,11 @@
       <p class="hero-readout" id="hero-readout" aria-live="polite"></p>
       <div class="spot" id="hero-spot"></div>
     </div>
-    <div class="hero-cta">
-      <a class="cta" href="#annotate">Find your own persona <span aria-hidden="true">→</span></a>
-      <span class="cta-note">Label 10 to 40 comments and see where your threshold falls.</span>
-    </div>
-    <p class="hero-note">The AI model's score is zero-shot Qwen3-14B. Scores are capped at both ends, so the clearest comments are spread across the last step.</p>
+  </div>
+  <p class="hero-note">The AI model's score is zero-shot Qwen3-14B. Scores are capped at both ends, so the clearest comments are spread across the last step.</p>
+  <div class="hero-cta">
+    <a class="cta" href="#annotate">Find your own persona <span aria-hidden="true">→</span></a>
+    <span class="cta-note">Label 10 to 40 comments and see where your threshold falls.</span>
   </div>
 </header>
 
@@ -145,6 +146,6 @@
 </main>
 <footer class="foot"><p>Companion to <i>Modeling Annotator Personas for Reddit Stance Detection</i>, WebSci 2027 (anonymous submission). Avery, Jack and Michael are made-up names.</p><a href="#top">Back to top ↑</a></footer>
 <div class="tip hidden" id="tip" role="tooltip"></div>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=4"></script>
 </body>
 </html>
