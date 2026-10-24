@@ -3,6 +3,7 @@ import { sig, fitCurve, makeGrid, table, shapley, kappa, interp } from "./model.
 const D = await (await fetch("data.json")).json();
 const C = D.comments, NC = C.s.length, A = ["A1", "A2", "A3"];
 const COL = { A1: "var(--a1)", A2: "var(--a2)", A3: "var(--a3)", You: "var(--you)" };
+const NAME = { A1: "Avery", A2: "Jack", A3: "Michael", You: "You" }, nm = a => NAME[a];   // made-up names, shown in place of A1-A3
 const TAU = Object.fromEntries(A.map(a => [a, D.curves[a].tau]));
 const SMIN = -21, SMAX = 21;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -48,47 +49,99 @@ const STANCE = Object.fromEntries(A.map(a => [a, [...C[a]].filter(c => c !== "N"
 
 /* ---------------- hero: the 1,000 comments in each annotator's lanes ---------------- */
 const hero = { who: "A1", nodes: null, W: 0 };
+const LANE = { S: "Support", N: "Neutral", O: "Oppose" };
+const TAG = { A1: "Spots a side early", A2: "Waits for a clear stance", A3: "Spots a side earliest" };
+// the ringed comment: a minimum wage comment the two early annotators call Oppose and Jack calls Neutral
+const SPOT = (() => { const mw = D.topics.findIndex(t => t.key === "minimum_wage"); let best = 0, bd = 1e9;
+  for (let i = 0; i < NC; i++) if (C.t[i] === mw && C.A2[i] === "N" && C.A1[i] !== "N" && C.A1[i] === C.A3[i] && Math.abs(C.s[i] - 11) < bd) { best = i; bd = Math.abs(C.s[i] - 11); }
+  return best; })();
 const jit = (() => { const r = rng(11); return Array.from({ length: NC }, () => r()); })();
 // scores are capped near +-20.7, so about 150 comments share the end values: spread those across the last unit so they stay visible
 const HX = (() => { const r = rng(29); return C.s.map(s => (s > 20.5 ? 20 + r() : s < -20.5 ? -21 + r() : s)); })();
 function drawHero() {
-  const fig = $("fig-hero"), H = 300;
+  const fig = $("fig-hero"), H = 336;
   const [svg, W] = canvas(fig, H); hero.W = W;
-  const L = 74, R = W - 12, x = v => L + ((v - SMIN) / (SMAX - SMIN)) * (R - L);
-  const lanes = { S: [18, 102], N: [120, 178], O: [196, 280] };
-  for (const [k, name] of [["S", "Support"], ["N", "Neutral"], ["O", "Oppose"]]) {
+  const L = W < 500 ? 66 : 78, R = W - 12, x = v => L + ((v - SMIN) / (SMAX - SMIN)) * (R - L);
+  const lanes = { S: [22, 104], N: [122, 180], O: [198, 280] };
+  el("clipPath", { id: "hero-clip" }, el("defs", {}, svg)).appendChild(el("rect", { x: L, y: 0, width: R - L, height: H }));
+  hero.zone = el("rect", { class: "zone", x: 0, y: 8, width: R - L, height: 284, opacity: 0.1 }, el("g", { "clip-path": "url(#hero-clip)" }, svg));
+  hero.counts = {};
+  for (const k of ["S", "N", "O"]) {
     const [y0, y1] = lanes[k];
-    el("line", { x1: L, x2: R, y1: y1 + 8, y2: y1 + 8, stroke: "var(--field-rule)" }, svg);
-    txt(svg, 0, (y0 + y1) / 2 + 4, name, { class: "lane-name" });
+    if (k !== "O") el("line", { x1: L, x2: R, y1: y1 + 9, y2: y1 + 9, stroke: "var(--field-rule)" }, svg);
+    txt(svg, 0, (y0 + y1) / 2 - 1, LANE[k], { class: "lane-name" });
+    hero.counts[k] = txt(svg, 0, (y0 + y1) / 2 + 14, "", { class: "lane-count" });
   }
-  const gate = el("g", {}, svg);
-  hero.gateLine = el("line", { y1: 8, y2: H - 10, "stroke-width": 2.5 }, gate);
-  hero.gateText = txt(gate, 0, 10, "", { "font-weight": 600 });
+  // axis: what left to right means
+  const ay = 306;
+  el("line", { x1: L, x2: R - 2, y1: ay, y2: ay, stroke: "var(--field-ink)", "stroke-opacity": 0.35 }, svg);
+  el("path", { d: `M${R - 8},${ay - 4}L${R - 1},${ay}L${R - 8},${ay + 4}`, fill: "none", stroke: "var(--field-ink)", "stroke-opacity": 0.5, "stroke-width": 1.5 }, svg);
+  txt(svg, L, ay + 20, W < 560 ? "← no clear stance" : "← the AI model reads no clear stance", { class: "axis-l" });
+  txt(svg, R, ay + 20, W < 560 ? "clear stance →" : "a clear stance →", { class: "axis-l", "text-anchor": "end" });
+  const gate = hero.gate = el("g", { class: "gate" }, svg);
+  hero.gateLine = el("line", { x1: 0, x2: 0, y1: 8, y2: 292, "stroke-width": 2.5 }, gate);
+  hero.gateText = txt(gate, 0, 16, "", { "font-weight": 600 });
   const g = el("g", {}, svg);
   hero.nodes = C.s.map((s, i) => el("circle", { class: "c", r: W < 500 ? 1.9 : 2.4, cx: 0, cy: 0 }, g));
+  const sg = el("g", { class: "spot-ring" }, svg);
+  el("circle", { r: 7.5, class: "spot-pulse" }, sg); el("circle", { r: 7.5, fill: "none", stroke: "var(--field-ink)", "stroke-width": 2 }, sg);
+  hero.spot = sg;
   hero.x = x; hero.lanes = lanes; hero.L = L; hero.R = R;
   setHero(hero.who, true);
 }
+const heroY = (i, lab) => { const [y0, y1] = hero.lanes[lab]; return y0 + jit[i] * (y1 - y0); };
 function setHero(who, instant) {
   hero.who = who;
-  const lab = C[who], { x, lanes } = hero;
+  const lab = C[who], { x } = hero;
   hero.nodes.forEach((n, i) => {
-    const [y0, y1] = lanes[lab[i]], y = y0 + jit[i] * (y1 - y0);
-    n.style.transform = `translate(${x(HX[i]).toFixed(1)}px, ${y.toFixed(1)}px)`;
+    n.style.transform = `translate(${x(HX[i]).toFixed(1)}px, ${heroY(i, lab[i]).toFixed(1)}px)`;
     n.style.fill = lab[i] === "N" ? "var(--field-dim)" : COL[who];
-    if (instant) n.style.transition = "none"; else n.style.transition = "";
+    n.style.transition = instant ? "none" : "";
   });
+  hero.spot.style.transition = instant ? "none" : "";
+  hero.spot.style.transform = `translate(${x(HX[SPOT]).toFixed(1)}px, ${heroY(SPOT, lab[SPOT]).toFixed(1)}px)`;
+  for (const k of ["S", "N", "O"]) hero.counts[k].textContent = [...lab].filter(l => l === k).length + (hero.W < 500 ? "" : " comments");
   const gx = x(TAU[who]);
-  hero.gateLine.setAttribute("x1", gx); hero.gateLine.setAttribute("x2", gx); hero.gateLine.style.stroke = COL[who];
-  hero.gateText.setAttribute("x", gx + 6); hero.gateText.textContent = `${who}'s threshold ${fmt(TAU[who])}`;
-  hero.gateText.style.fill = COL[who]; hero.gateText.style.opacity = 1;
-  if (gx > hero.R - 140) { hero.gateText.setAttribute("x", gx - 6); hero.gateText.setAttribute("text-anchor", "end"); } else hero.gateText.setAttribute("text-anchor", "start");
+  for (const e of [hero.gate, hero.zone]) { e.style.transition = instant ? "none" : ""; e.style.transform = `translateX(${gx.toFixed(1)}px)`; }
+  hero.gateLine.style.stroke = COL[who]; hero.zone.style.fill = COL[who];
+  hero.gateText.textContent = `${nm(who)}'s threshold`;
+  hero.gateText.style.fill = COL[who];
+  const flip = gx > hero.R - 140; hero.gateText.setAttribute("x", flip ? -8 : 8); hero.gateText.setAttribute("text-anchor", flip ? "end" : "start");
   const ro = $("hero-readout"); ro.style.setProperty("--c", COL[who]);
   const mw = D.topics.findIndex(t => t.key === "minimum_wage");
-  ro.innerHTML = `${who} calls <span class="pct">${pct(STANCE[who])}</span> of these comments a stance, and ${pct(SHARE[who][mw])} of the minimum wage debate.`;
+  ro.innerHTML = `${nm(who)} calls <span class="pct">${pct(STANCE[who])}</span> of these comments a stance, and ${pct(SHARE[who][mw])} of the minimum wage debate.`;
+  $("hero-spot").innerHTML = `<span class="ring"></span>The ringed comment is about the minimum wage. Same words, three readers:
+    <span class="chips">${A.map(a => `<span class="chip${a === who ? " on" : ""}" style="--c:${COL[a]}"><span class="sw"></span>${nm(a)}: <b>${LANE[C[a][SPOT]]}</b></span>`).join("")}</span>`;
+  for (const b of $("hero-who").children) {
+    b.setAttribute("aria-checked", String(b.dataset.a === who)); b.tabIndex = b.dataset.a === who ? 0 : -1;
+    if (b.dataset.a === who) { const t = b.querySelector(".pc-tick"), t2 = t.cloneNode(); t.replaceWith(t2); }   // restart the dwell bar
+  }
 }
-radio($("hero-who"), A.map(a => ({ value: a, label: a, color: COL[a] })), "A1", a => setHero(a));
-$("hero-who").setAttribute("role", "radiogroup");
+// persona cards; they take turns on their own until someone picks one
+const DWELL = 5200, auto = { on: !reduced, t: 0, seen: true };
+function stopAuto() { auto.on = false; clearTimeout(auto.t); $("hero-who").classList.remove("auto"); }
+function autoNext() { if (!auto.on) return; if (auto.seen) setHero(A[(A.indexOf(hero.who) + 1) % A.length]); auto.t = setTimeout(autoNext, DWELL); }
+function buildPersonaCards() {
+  const box = $("hero-who"); box.innerHTML = ""; box.style.setProperty("--dwell", DWELL + "ms");
+  for (const a of A) {
+    const share = k => [...C[a]].filter(l => l === k).length / NC;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "pcard"; b.dataset.a = a; b.setAttribute("role", "radio"); b.style.setProperty("--c", COL[a]);
+    b.innerHTML = `<span class="pc-name"><span class="sw"></span>${nm(a)}</span><span class="pc-tag">${TAG[a]}</span>
+      <span class="pc-bar" title="Support, Neutral, Oppose"><i style="flex:${share("S")}"></i><i class="n" style="flex:${share("N")}"></i><i style="flex:${share("O")}"></i></span>
+      <span class="pc-num"><b>${pct(STANCE[a])}</b> take a side<span class="thr"> · threshold ${fmt(TAU[a])}</span></span><span class="pc-tick"></span>`;
+    b.onclick = () => { stopAuto(); setHero(a); };
+    box.appendChild(b);
+  }
+  box.onkeydown = ev => {   // arrow keys move within the group
+    if (!["ArrowLeft", "ArrowRight"].includes(ev.key)) return;
+    const bs = [...box.children], i = bs.indexOf(document.activeElement); if (i < 0) return;
+    const j = (i + (ev.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length; bs[j].focus(); bs[j].click(); ev.preventDefault();
+  };
+  if (auto.on) box.classList.add("auto");
+}
+buildPersonaCards();
+new IntersectionObserver(es => { auto.seen = es[0].isIntersecting; }).observe($("fig-hero"));
 
 /* ---------------- 1. be the annotator ---------------- */
 const PARA = [...D.paraphrases].sort((a, b) => a.s - b.s);
@@ -121,7 +174,7 @@ function renderNChoice() {
 function updatePrecisionHint() {
   const p = precision[ann.n];
   $("ann-precision").textContent = p == null ? "More comments give a more precise estimate of your threshold."
-    : `With ${ann.n} comments your threshold is typically pinned down to within about ±${p.toFixed(0)} on the ruler, where A2 and A3 sit 14 apart. More comments make it more precise.`;
+    : `With ${ann.n} comments your threshold is typically pinned down to within about ±${p.toFixed(0)} on the ruler, where ${nm("A2")} and ${nm("A3")} sit 14 apart. More comments make it more precise.`;
 }
 function startAnnotate() {
   ann.items = pickItems(ann.n, rng(Date.now() % 100000)); ann.labels = []; ann.i = 0;
@@ -161,14 +214,14 @@ function finishAnnotate() {
 function renderVerdict() {
   const f = ann.fit, k = ann.labels.filter(l => l !== "N").length, n = ann.labels.length;
   const looser = A.filter(a => TAU[a] < f.tau), stricter = A.filter(a => TAU[a] > f.tau);
-  const list = xs => xs.length === 1 ? xs[0] : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1];
+  const list = xs => (xs = xs.map(nm), xs.length === 1 ? xs[0] : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1]);
   const rel = !looser.length ? `You call a comment a stance sooner than all three annotators.`
     : !stricter.length ? `You need more evidence than all three annotators before calling something a stance.`
       : `You need more evidence than ${list(looser)}, and less than ${list(stricter)}.`;
   const close = A.reduce((b, a) => (Math.abs(TAU[a] - f.tau) < Math.abs(TAU[b] - f.tau) ? a : b));
   const wide = f.hi - f.lo > 14 ? " Label more comments to pin it down." : "";
-  $("ann-summary").innerHTML = `Your threshold is about <span class="you">${fmt(f.tau)}</span>, likely between ${fmt(f.lo)} and ${fmt(f.hi)}. ${rel} Your threshold is closest to ${close}'s.${wide} <span style="font-weight:400;color:var(--ink2)">You called ${k} of ${n} comments a stance.</span>`;
-  $("curve-legend").innerHTML = [...A, "You"].map(a => `<span style="--c:${COL[a]}"><i></i>${a} ${fmt(a === "You" ? f.tau : TAU[a])}</span>`).join("");
+  $("ann-summary").innerHTML = `Your threshold is about <span class="you">${fmt(f.tau)}</span>, likely between ${fmt(f.lo)} and ${fmt(f.hi)}. ${rel} Your threshold is closest to ${nm(close)}'s.${wide} <span style="font-weight:400;color:var(--ink2)">You called ${k} of ${n} comments a stance.</span>`;
+  $("curve-legend").innerHTML = [...A, "You"].map(a => `<span style="--c:${COL[a]}"><i></i>${nm(a)} ${fmt(a === "You" ? f.tau : TAU[a])}</span>`).join("");
 }
 function axisX(svg, x, y, ticks, label, W) {
   for (const t of ticks) { el("line", { x1: x(t), x2: x(t), y1: y, y2: y + 5, stroke: "var(--muted)" }, svg); txt(svg, x(t), y + 18, t > 0 ? "+" + t : String(t).replace("-", "−"), { "text-anchor": "middle" }); }
@@ -219,7 +272,7 @@ function topicChart(fig, series, opts = {}) {   // series: [{name, color, values
 function drawYouTopics() {
   const f = ann.fit, you = D.topics.map((_, t) => { let n = 0, v = 0; for (let i = 0; i < NC; i++) if (C.t[i] === t) { n++; v += sig(f.k * (C.s[i] - f.tau)); } return v / n; });
   ann.topicShare = you;
-  topicChart($("fig-you-topics"), [...A.map(a => ({ name: a, color: COL[a], values: SHARE[a] })), { name: "You", color: COL.You, values: you, shape: "diamond" }]);
+  topicChart($("fig-you-topics"), [...A.map(a => ({ name: nm(a), color: COL[a], values: SHARE[a] })), { name: "You", color: COL.You, values: you, shape: "diamond" }]);
 }
 
 /* ---------------- 2. typed comment ---------------- */
@@ -283,14 +336,14 @@ function renderTyped({ sb, side, sideClear }) {
   el("line", { x1: L, x2: R, y1: y0, y2: y0, stroke: "var(--ink)", "stroke-width": 2 }, svg);
   txt(svg, L, y0 + 22, "Neutral side", {}); txt(svg, R, y0 + 22, "Stance side", { "text-anchor": "end" });
   const gates = A.map(a => [a, TAU[a]]); if (ann.fit) gates.push(["You", ann.fit.tau]);
-  gates.forEach(([a, v], k) => { el("line", { x1: x(v), x2: x(v), y1: y0 - 14, y2: y0 + 6, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg); txt(svg, x(v), y0 - 18 - (k % 2) * 12, a, { "text-anchor": "middle", style: `fill:${COL[a]}`, "font-weight": 600 }); });
+  gates.forEach(([a, v], k) => { el("line", { x1: x(v), x2: x(v), y1: y0 - 14, y2: y0 + 6, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg); txt(svg, x(v), y0 - 18 - (k % 2) * 12, nm(a), { "text-anchor": "middle", style: `fill:${COL[a]}`, "font-weight": 600 }); });
   el("path", { d: `M${x(sq)},${y0 - 2}l-8,-16h16z`, style: "fill:var(--ink)" }, svg);
   txt(svg, x(sq), 14, "Your comment", { "text-anchor": x(sq) > W - 80 ? "end" : x(sq) < 80 ? "start" : "middle", class: "t-strong" });
   const sideName = side === "S" ? "Support" : "Oppose";
   const kb = A.reduce((s, a) => s + BR.annotators[a].b, 0) / 3, kq = A.reduce((s, a) => s + D.curves[a].b, 0) / 3;
   const cards = A.map(a => [a, sig(BR.annotators[a].b * (sb - BR.annotators[a].tau))]);
   if (ann.fit) cards.push(["You", sig(((ann.fit.k * kb) / kq) * (sb - interp(ann.fit.tau, QM.qwen, QM.browser)))]);
-  $("typed-personas").innerHTML = cards.map(([a, p]) => `<div class="persona" style="--c:${COL[a]}"><div class="who-n">${a === "You" ? "You (from section 1)" : a}</div>
+  $("typed-personas").innerHTML = cards.map(([a, p]) => `<div class="persona" style="--c:${COL[a]}"><div class="who-n">${a === "You" ? "You (from section 1)" : nm(a)}</div>
     <div class="lab">${p >= 0.5 ? (sideClear ? sideName : "Takes a side") : "Neutral"}</div><div class="p">${Math.round(p * 100)}% chance of a stance${p >= 0.5 && !sideClear ? ", side unclear" : ""}</div></div>`).join("");
 }
 
@@ -305,7 +358,7 @@ function drawRuler() {
   const top = Math.max(...bins.map(b => b.n)), h = n => (Math.sqrt(n) / Math.sqrt(top)) * (B - T);
   pg.bars = bins.map(b => el("rect", { x: x(b.lo) + 1, width: x(b.lo + 1) - x(b.lo) - 2, y: B - h(b.n), height: h(b.n), rx: 2 }, svg));
   pg.binLo = bins.map(b => b.lo);
-  A.forEach((a, k) => { const gx = x(TAU[a]); el("line", { x1: gx, x2: gx, y1: B + 4, y2: B + 14, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg); txt(svg, gx, B + 27 + (k === 2 ? 12 : 0), a, { "text-anchor": "middle", "font-weight": 600, style: `fill:${COL[a]}` }); });
+  A.forEach((a, k) => { const gx = x(TAU[a]); el("line", { x1: gx, x2: gx, y1: B + 4, y2: B + 14, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg); txt(svg, gx, B + 27 + (k === 2 ? 12 : 0), nm(a), { "text-anchor": "middle", "font-weight": 600, style: `fill:${COL[a]}` }); });
   txt(svg, L, H - 4, "← reads as Neutral", {}); txt(svg, R, H - 4, "reads as taking a side →", { "text-anchor": "end" });
   const g = el("g", { class: "handle", tabindex: 0, role: "slider", "aria-label": "Threshold", "aria-valuemin": SMIN, "aria-valuemax": SMAX }, svg);
   el("rect", { x: -14, y: T - 30, width: 28, height: B - T + 36, fill: "transparent" }, g);
@@ -333,14 +386,14 @@ function setCut(v, init) {
   pg.bars.forEach((b, i) => { b.style.fill = pg.binLo[i] + 0.5 >= pg.cut ? "var(--model)" : "var(--neutral)"; });
   [...$("pg-snaps").children].forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.v - pg.cut) < 0.26));
   const lab = modelLab(pg.cut), share = topicShare(lab), neu = lab.filter(l => l === "N").length / NC;
-  $("pg-stats").innerHTML = `<div class="stat"><div class="k">Labelled Neutral</div><div class="v">${pct(neu)}</div><div class="sub">A1 ${pct(1 - STANCE.A1)}, A2 ${pct(1 - STANCE.A2)}, A3 ${pct(1 - STANCE.A3)}</div></div>` +
-    A.map(a => { let ok = 0; for (let i = 0; i < NC; i++) if (lab[i] === C[a][i]) ok++; return `<div class="stat"><div class="k"><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COL[a]}"></span>Matches ${a}</div><div class="v">${pct(ok / NC)}</div><div class="sub">κ = ${kappa(lab, [...C[a]]).toFixed(2)}</div></div>`; }).join("");
-  topicChart($("fig-pg-topics"), A.map(a => ({ name: a, color: COL[a], values: SHARE[a], shape: "tick" })), { bars: share, barColor: "var(--neutral)" });
+  $("pg-stats").innerHTML = `<div class="stat"><div class="k">Labelled Neutral</div><div class="v">${pct(neu)}</div><div class="sub">${A.map(a => `${nm(a)} ${pct(1 - STANCE[a])}`).join(", ")}</div></div>` +
+    A.map(a => { let ok = 0; for (let i = 0; i < NC; i++) if (lab[i] === C[a][i]) ok++; return `<div class="stat"><div class="k"><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COL[a]}"></span>Matches ${nm(a)}</div><div class="v">${pct(ok / NC)}</div><div class="sub">κ = ${kappa(lab, [...C[a]]).toFixed(2)}</div></div>`; }).join("");
+  topicChart($("fig-pg-topics"), A.map(a => ({ name: nm(a), color: COL[a], values: SHARE[a], shape: "tick" })), { bars: share, barColor: "var(--neutral)" });
   const mw = D.topics.findIndex(t => t.key === "minimum_wage"), sv = D.topics.findIndex(t => t.key === "surveillance");
   $("pg-caption").textContent = `Grey bars: each topic's stance share with the line at ${fmt(pg.cut)}. Coloured ticks: each annotator's own stance share. At this line ${pct(share[mw])} of the minimum wage comments and ${pct(share[sv])} of the mass surveillance comments take a side.`;
 }
 function buildSnaps() {
-  const items = [...A.map(a => ({ v: TAU[a], label: `${a}'s threshold`, color: COL[a] })), { v: 0, label: "Model's own default" }];
+  const items = [...A.map(a => ({ v: TAU[a], label: `${nm(a)}'s threshold`, color: COL[a] })), { v: 0, label: "Model's own default" }];
   $("pg-snaps").innerHTML = "";
   for (const it of items) {
     const b = document.createElement("button"); b.type = "button"; b.dataset.v = it.v;
@@ -362,8 +415,8 @@ function buildToyControls() {
   for (const [key, side] of [["x", 0], ["y", 1]]) {
     const box = $(key === "x" ? "toy-x" : "toy-y"), name = toy.names[side], c = COL[name];
     box.style.setProperty("--c", c);
-    box.innerHTML = `<h4><span class="sw"></span>${name}</h4>` + SL.map(([k, lab, mn, mx, st]) => `<label class="slider"><span>${lab}</span><output id="o-${key}-${k}"></output>
-      <input type="range" min="${mn}" max="${mx}" step="${st}" value="${toy[key][k]}" data-k="${k}" aria-label="${name} ${lab}"></label>`).join("");
+    box.innerHTML = `<h4><span class="sw"></span>${nm(name)}</h4>` + SL.map(([k, lab, mn, mx, st]) => `<label class="slider"><span>${lab}</span><output id="o-${key}-${k}"></output>
+      <input type="range" min="${mn}" max="${mx}" step="${st}" value="${toy[key][k]}" data-k="${k}" aria-label="${nm(name)} ${lab}"></label>`).join("");
     box.querySelectorAll("input").forEach(inp => (inp.oninput = () => { toy[key][inp.dataset.k] = +inp.value; scheduleToy(); }));
   }
   renderToy();
@@ -380,7 +433,7 @@ function renderToy() {
     el("path", { d: "M" + dens.map(([t, w]) => `${x(t).toFixed(1)},${(44 - (w / top) * 34).toFixed(1)}`).join("L"), fill: "none", stroke: "var(--muted)", "stroke-width": 1.5 }, svg);
     txt(svg, L, 56, "← opposes", {}); txt(svg, R, 56, "supports →", { "text-anchor": "end" }); txt(svg, (L + R) / 2, 56, "hidden position of a comment", { "text-anchor": "middle" });
     [[px, toy.names[0], 80], [py, toy.names[1], 118]].forEach(([p, n, y]) => {
-      txt(svg, 0, y + 5, n, { "font-weight": 600, style: `fill:${COL[n]}` });
+      txt(svg, 0, y + 5, nm(n), { "font-weight": 600, style: `fill:${COL[n]}` });
       el("line", { x1: L, x2: R, y1: y, y2: y, stroke: "var(--rule)", "stroke-width": 8, "stroke-linecap": "round" }, svg);
       const a = Math.max(-3, p.c1), b = Math.min(3, p.c2);
       el("rect", { x: x(a), y: y - 9, width: Math.max(0, x(b) - x(a)), height: 18, rx: 9, style: `fill:${COL[n]}`, opacity: 0.85 }, svg);
@@ -388,7 +441,7 @@ function renderToy() {
     }); }
   // table
   { const fig = $("fig-toy-table"), cs0 = Math.min(64, ((fig.clientWidth || 300) - 70) / 3), [svg, W] = canvas(fig, 40 + 3 * cs0 + 34, 240), cs = Math.min(64, (W - 70) / 3), L = 60, T = 40, labs = ["Oppose", "Neutral", "Support"];
-    txt(svg, L + 1.5 * cs, 12, `${toy.names[1]} says`, { "text-anchor": "middle", "font-weight": 600, style: `fill:${COL[toy.names[1]]}` });
+    txt(svg, L + 1.5 * cs, 12, `${nm(toy.names[1])} says`, { "text-anchor": "middle", "font-weight": 600, style: `fill:${COL[toy.names[1]]}` });
     labs.forEach((l, j) => txt(svg, L + (j + 0.5) * cs, T - 8, l, { "text-anchor": "middle" }));
     labs.forEach((l, i) => txt(svg, L - 6, T + (i + 0.5) * cs + 4, l, { "text-anchor": "end" }));
     const mx = Math.max(...M.flat());
@@ -397,7 +450,7 @@ function renderToy() {
       el("rect", { x: L + j * cs + 1, y: T + i * cs + 1, width: cs - 2, height: cs - 2, rx: 6, style: diag ? `fill:var(--a3);opacity:${0.15 + 0.85 * v / mx}` : `fill:var(--you);opacity:${0.1 + 0.9 * Math.sqrt(v / mx)}` }, svg);
       txt(svg, L + (j + 0.5) * cs, T + (i + 0.5) * cs + 5, (v * 100).toFixed(0), { "text-anchor": "middle", class: "t-strong", "font-size": 15 });
     }));
-    txt(svg, 0, T + 3 * cs + 22, `${toy.names[0]} says (rows). Green: agree; pink: disagree.`, {}); }
+    txt(svg, 0, T + 3 * cs + 22, `${nm(toy.names[0])} says (rows). Green: agree; pink: disagree.`, {}); }
   // split
   { const fig = $("fig-toy-split"), [svg, W] = canvas(fig, 230, 260), L = 0, R = W, y = 70, tot = sp.total;
     const agree = 1 - tot, nvs = M[0][1] + M[1][0] + M[1][2] + M[2][1], opp = M[0][2] + M[2][0];
@@ -417,7 +470,7 @@ function renderToy() {
     txt(svg, 0, y + 140, `Agree on ${pct(agree)}.`, {}); }
 }
 function buildPresets() {
-  const items = PRESETS.map(([a, b]) => ({ value: `${a}-${b}`, label: `${a} and ${b}` })).concat([{ value: "same", label: "Same band, noise only" }]);
+  const items = PRESETS.map(([a, b]) => ({ value: `${a}-${b}`, label: `${nm(a)} and ${nm(b)}` })).concat([{ value: "same", label: "Same band, noise only" }]);
   radio($("toy-presets"), items, "A1-A2", v => {
     if (v === "same") { toy.names = ["A1", "A3"]; toy.x = toPar(OA.A1); toy.y = { ...toPar(OA.A1) }; }
     else { const [a, b] = v.split("-"); toy.names = [a, b]; toy.x = toPar(OA[a]); toy.y = toPar(OA[b]); }
@@ -428,9 +481,11 @@ function buildPresets() {
 /* ---------------- boot ---------------- */
 drawHero(); buildSnaps(); drawRuler(); buildPresets(); buildToyControls(); renderNChoice();
 setTimeout(estimatePrecision, 50);
-if (!reduced) {   // one orchestrated moment: comments start Neutral, then settle into A1's lanes
-  hero.nodes.forEach((n, i) => { n.style.transition = "none"; n.style.transform = `translate(${hero.x(HX[i]).toFixed(1)}px, ${(hero.lanes.N[0] + jit[i] * (hero.lanes.N[1] - hero.lanes.N[0])).toFixed(1)}px)`; n.style.fill = "var(--field-dim)"; });
+if (!reduced) {   // one orchestrated moment: comments start Neutral, then settle into A1's lanes, then the personas take turns
+  hero.nodes.forEach((n, i) => { n.style.transition = "none"; n.style.transform = `translate(${hero.x(HX[i]).toFixed(1)}px, ${heroY(i, "N").toFixed(1)}px)`; n.style.fill = "var(--field-dim)"; });
+  hero.spot.style.transition = "none"; hero.spot.style.transform = `translate(${hero.x(HX[SPOT]).toFixed(1)}px, ${heroY(SPOT, "N").toFixed(1)}px)`;
   requestAnimationFrame(() => requestAnimationFrame(() => setHero("A1")));
+  auto.t = setTimeout(autoNext, DWELL);
 }
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
   drawHero(); drawRuler(); renderToy(); if (ann.fit && !$("ann-result").classList.contains("hidden")) { drawCurves(); drawYouTopics(); } if (typed.last) renderTyped(typed.last);

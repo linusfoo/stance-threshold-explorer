@@ -11,25 +11,47 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="hero">
+<header class="hero" id="top">
   <div class="hero-text">
-    <h1>Same comments, three annotators, three different debates</h1>
+    <p class="kicker">Interactive companion to a WebSci 2027 paper</p>
+    <h1>What is your annotator persona?</h1>
     <p class="lede">Three people labelled the same 1,000 comments from Reddit's r/changemyview as supporting, opposing or neutral towards a topic. When two of them both see a stance, they pick the same side 94 to 96% of the time. What they disagree on is how much a comment has to say before it stops being Neutral.</p>
+    <p class="lede-note">Avery, Jack and Michael are made-up names for the paper's annotators A1, A2 and A3.</p>
   </div>
   <div class="hero-stage">
-    <div class="who" role="radiogroup" aria-label="Show the labels of" id="hero-who"></div>
-    <figure class="hero-fig" id="fig-hero" aria-label="The 1,000 comments, placed by how strongly a language model reads them as taking a side, sorted into the lanes the chosen annotator gave them"></figure>
-    <p class="hero-readout" id="hero-readout" aria-live="polite"></p>
-    <p class="hero-note">Each dot is a comment, placed left to right by how strongly an untrained language model reads it as taking a side. The lane is the label the chosen annotator gave it; the line is where that annotator starts calling comments a stance. Scores are capped at both ends, so the clearest comments are spread across the last step.</p>
+    <p class="stage-ask">Pick an annotator to see how they labelled the same 1,000 comments</p>
+    <div class="pcards" role="radiogroup" aria-label="Show the labels of" id="hero-who"></div>
+    <ul class="howto" aria-label="How to read the chart">
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" class="hk-dot"/></svg><span><b>Each dot</b> is one Reddit comment</span></li>
+      <li><svg viewBox="0 0 28 16" aria-hidden="true"><path d="M2 8h22m-5-4 5 4-5 4" class="hk-line"/></svg><span><b>Further right:</b> an AI model reads a clearer stance in it</span></li>
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h12" class="hk-line"/></svg><span><b>Row:</b> the label this annotator gave it</span></li>
+      <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v14" class="hk-gate"/></svg><span><b>Line:</b> their threshold, where Neutral ends</span></li>
+    </ul>
+    <figure class="hero-fig" id="fig-hero" aria-label="The 1,000 comments, placed by how strongly a language model reads them as taking a side, sorted into the rows the chosen annotator gave them"></figure>
+    <div class="hero-foot">
+      <p class="hero-readout" id="hero-readout" aria-live="polite"></p>
+      <div class="spot" id="hero-spot"></div>
+    </div>
+    <div class="hero-cta">
+      <a class="cta" href="#annotate">Find your own persona <span aria-hidden="true">→</span></a>
+      <span class="cta-note">Label 10 to 40 comments and see where your threshold falls.</span>
+    </div>
+    <p class="hero-note">The AI model's score is zero-shot Qwen3-14B. Scores are capped at both ends, so the clearest comments are spread across the last step.</p>
   </div>
 </header>
 
 <main>
+<div class="findings" aria-label="Key findings">
+  <div class="finding"><div class="fv">94–96%</div><p>of the time, two annotators who both see a stance pick the <b>same side</b>.</p></div>
+  <div class="finding"><div class="fv">52–74%</div><p>of the same comments are labelled <b>Neutral</b>, depending on who labels them.</p></div>
+  <div class="finding"><div class="fv">19% <small>vs</small> 63%</div><p>of the universal basic income debate takes a side, depending on <b>whose labels</b> you trust.</p></div>
+</div>
+<p class="findings-take">The disagreement is not about <i>which side</i> a comment takes. It is about <i>how much</i> it has to say before it counts. That threshold is the core of what the paper calls an annotator's persona.</p>
 <nav class="steps" aria-label="Sections">
-  <a href="#annotate"><b>1</b> Label comments yourself</a>
-  <a href="#typed"><b>2</b> Score your own comment</a>
-  <a href="#playground"><b>3</b> Move the threshold</a>
-  <a href="#toy"><b>4</b> Take disagreement apart</a>
+  <a href="#annotate"><b>1</b><span>Label comments yourself</span><small>Find your own threshold</small></a>
+  <a href="#typed"><b>2</b><span>Score your own comment</span><small>A model runs in your browser</small></a>
+  <a href="#playground"><b>3</b><span>Move the threshold</span><small>Watch nine debates change</small></a>
+  <a href="#toy"><b>4</b><span>Take disagreement apart</span><small>Threshold, reversal or noise</small></a>
 </nav>
 
 <section id="annotate">
@@ -60,7 +82,7 @@
     <h3>The nine debates under your threshold</h3>
     <p>Applying your curve to the 1,000 annotated comments gives each topic's <b>stance share</b>, the share of comments that take a side.</p>
     <figure class="fig wide" id="fig-you-topics" aria-label="Stance share per topic for each annotator and you"></figure>
-    <p class="caption">A1 to A3 from their own labels, you from your fitted curve. The paper's corpus estimates (Table 4) come from 4,500 further comments with bias correction, so they differ somewhat.</p>
+    <p class="caption">Avery, Jack and Michael from their own labels, you from your fitted curve. The paper's corpus estimates (Table 4) come from 4,500 further comments with bias correction, so they differ somewhat.</p>
     <button class="btn quiet" id="ann-again">Label a new set</button>
   </div>
 </section>
@@ -114,14 +136,14 @@
 <section id="notes" class="notes">
   <h2>About the data</h2>
   <ul>
-    <li>1,000 comments on nine topics in three genres, each labelled by annotators A1, A2 and A3. This page holds each comment's topic, ruler score, the side the ruler reads and the three labels, and no comment text.</li>
+    <li>1,000 comments on nine topics in three genres, each labelled by annotators A1, A2 and A3, shown here under the made-up names Avery, Jack and Michael. This page holds each comment's topic, ruler score, the side the ruler reads and the three labels, and no comment text.</li>
     <li>The ruler is zero-shot Qwen3-14B: how much more likely it finds a stance than Neutral, log P(stance) minus log P(Neutral), capped near ±21.</li>
     <li>The comments in section 1 are paraphrases written for this page and scored by the same model.</li>
     <li>Topic shares on this page describe the annotated comments. The paper's corpus estimates use persona models and prediction-powered inference on 4,500 further comments.</li>
   </ul>
 </section>
 </main>
-<footer class="foot">Companion to <i>Modeling Annotator Personas for Reddit Stance Detection</i>, WebSci 2027.</footer>
+<footer class="foot"><p>Companion to <i>Modeling Annotator Personas for Reddit Stance Detection</i>, WebSci 2027 (anonymous submission). Avery, Jack and Michael are made-up names.</p><a href="#top">Back to top ↑</a></footer>
 <div class="tip hidden" id="tip" role="tooltip"></div>
 <script type="module" src="app.js"></script>
 </body>
