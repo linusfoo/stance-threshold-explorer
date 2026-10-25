@@ -1,6 +1,8 @@
-import { sig, fitCurve, makeGrid, table, shapley, kappa, interp } from "./model.js";
+import { sig, fitCurve, makeGrid, table, shapley, kappa, interp } from "./model.js?v=4";
 
-const D = await (await fetch("data.json")).json();
+const loadFailed = () => { const l = document.getElementById("loading"); if (l && !l.classList.contains("hidden")) l.textContent = "The interactive figure could not load. Please reload the page."; };
+addEventListener("error", loadFailed); addEventListener("unhandledrejection", loadFailed);
+const D = await (await fetch("data.json?v=4")).json();
 const C = D.comments, NC = C.s.length, A = ["A1", "A2", "A3"];
 const COL = { A1: "var(--a1)", A2: "var(--a2)", A3: "var(--a3)", You: "var(--you)" };
 const NAME = { A1: "Avery", A2: "Jack", A3: "Michael", You: "You" }, nm = a => NAME[a];   // made-up names, shown in place of A1-A3
@@ -18,6 +20,16 @@ function el(tag, attrs = {}, parent) {
   return e;
 }
 function txt(parent, x, y, s, attrs = {}) { const t = el("text", { x, y, ...attrs }, parent); t.textContent = s; return t; }
+// annotator names under or over a scale: a name that would overlap the one before it moves to the next line
+function stackNames(svg, gates, x, y, dy, L, R) {
+  const rows = [];
+  [...gates].sort((p, q) => p[1] - q[1]).forEach(([a, v]) => {
+    const half = nm(a).length * 3.6 + 4, cx = Math.min(R - half, Math.max(L + half, x(v)));
+    let r = rows.findIndex(end => cx - half > end); if (r < 0) r = rows.push(0) - 1; rows[r] = cx + half;
+    txt(svg, cx, y + r * dy, nm(a), { "text-anchor": "middle", style: `fill:${COL[a]}`, "font-weight": 600 });
+  });
+  return rows.length;
+}
 function canvas(fig, H, minW = 320) {
   const W = Math.max(minW, Math.round(fig.clientWidth || 720));
   fig.innerHTML = ""; return [el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, fig), W];
@@ -141,6 +153,7 @@ function buildPersonaCards() {
   if (auto.on) box.classList.add("auto");
 }
 buildPersonaCards();
+$("loading").classList.add("hidden");
 new IntersectionObserver(es => { auto.seen = es[0].isIntersecting; }).observe($("fig-hero"));
 
 /* ---------------- 1. be the annotator ---------------- */
@@ -249,7 +262,7 @@ function drawCurves() {
 }
 function topicChart(fig, series, opts = {}) {   // series: [{name, color, values[9], shape}] ; optional bars: values[9]
   const rowH = 26, gH = 22, H = 24 + D.topics.length * rowH + 3 * gH + 30, [svg, W] = canvas(fig, H);
-  const L = W < 520 ? 150 : 190, R = W - 16, x = v => L + v * (R - L);
+  const L = W < 520 ? 172 : 190, R = W - 16, x = v => L + v * (R - L);
   for (const v of [0, 0.25, 0.5, 0.75, 1]) { el("line", { x1: x(v), x2: x(v), y1: 14, y2: H - 30, stroke: "var(--rule)" }, svg); txt(svg, x(v), H - 12, pct(v), { "text-anchor": "middle" }); }
   let yy = 18, g0 = null;
   D.topics.forEach((t, i) => {
@@ -331,12 +344,13 @@ $("typed-go").onclick = async () => {
 };
 function renderTyped({ sb, side, sideClear }) {
   $("typed-result").classList.remove("hidden");
-  const sq = interp(sb, QM.browser, QM.qwen);   // where it would sit on the main ruler (quantile map)
-  const fig = $("fig-typed"), H = 120, [svg, W] = canvas(fig, H), L = 10, R = W - 10, x = v => L + ((v - SMIN) / (SMAX - SMIN)) * (R - L), y0 = 64;
+  const sq = Math.min(SMAX, Math.max(SMIN, interp(sb, QM.browser, QM.qwen)));   // where it would sit on the main ruler (quantile map), kept on the scale
+  const fig = $("fig-typed"), H = 128, [svg, W] = canvas(fig, H), L = 10, R = W - 10, x = v => L + ((v - SMIN) / (SMAX - SMIN)) * (R - L), y0 = 72;
   el("line", { x1: L, x2: R, y1: y0, y2: y0, stroke: "var(--ink)", "stroke-width": 2 }, svg);
   txt(svg, L, y0 + 22, "Neutral side", {}); txt(svg, R, y0 + 22, "Stance side", { "text-anchor": "end" });
   const gates = A.map(a => [a, TAU[a]]); if (ann.fit) gates.push(["You", ann.fit.tau]);
-  gates.forEach(([a, v], k) => { el("line", { x1: x(v), x2: x(v), y1: y0 - 14, y2: y0 + 6, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg); txt(svg, x(v), y0 - 18 - (k % 2) * 12, nm(a), { "text-anchor": "middle", style: `fill:${COL[a]}`, "font-weight": 600 }); });
+  for (const [a, v] of gates) el("line", { x1: x(v), x2: x(v), y1: y0 - 14, y2: y0 + 6, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg);
+  stackNames(svg, gates, x, y0 - 18, -15, L, R);
   el("path", { d: `M${x(sq)},${y0 - 2}l-8,-16h16z`, style: "fill:var(--ink)" }, svg);
   txt(svg, x(sq), 14, "Your comment", { "text-anchor": x(sq) > W - 80 ? "end" : x(sq) < 80 ? "start" : "middle", class: "t-strong" });
   const sideName = side === "S" ? "Support" : "Oppose";
@@ -351,14 +365,15 @@ function renderTyped({ sb, side, sideClear }) {
 const pg = { cut: 0 };
 const modelLab = cut => C.s.map((s, i) => (s >= cut ? C.side[i] : "N"));
 function drawRuler() {
-  const fig = $("fig-ruler"), H = 210, [svg, W] = canvas(fig, H), L = 12, R = W - 12, T = 40, B = H - 50;
+  const fig = $("fig-ruler"), H = 228, [svg, W] = canvas(fig, H), L = 12, R = W - 12, T = 40, B = H - 68;
   const x = v => L + ((v - SMIN) / (SMAX - SMIN)) * (R - L), inv = px => SMIN + ((px - L) / (R - L)) * (SMAX - SMIN);
   const bins = Array.from({ length: 42 }, (_, i) => ({ lo: SMIN + i, n: 0 }));
   C.s.forEach(s => { bins[Math.min(41, Math.max(0, Math.floor(s - SMIN)))].n++; });
   const top = Math.max(...bins.map(b => b.n)), h = n => (Math.sqrt(n) / Math.sqrt(top)) * (B - T);
   pg.bars = bins.map(b => el("rect", { x: x(b.lo) + 1, width: x(b.lo + 1) - x(b.lo) - 2, y: B - h(b.n), height: h(b.n), rx: 2 }, svg));
   pg.binLo = bins.map(b => b.lo);
-  A.forEach((a, k) => { const gx = x(TAU[a]); el("line", { x1: gx, x2: gx, y1: B + 4, y2: B + 14, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg); txt(svg, gx, B + 27 + (k === 2 ? 12 : 0), nm(a), { "text-anchor": "middle", "font-weight": 600, style: `fill:${COL[a]}` }); });
+  A.forEach(a => el("line", { x1: x(TAU[a]), x2: x(TAU[a]), y1: B + 4, y2: B + 14, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg));
+  stackNames(svg, A.map(a => [a, TAU[a]]), x, B + 27, 15, L, R);
   txt(svg, L, H - 4, "← reads as Neutral", {}); txt(svg, R, H - 4, "reads as taking a side →", { "text-anchor": "end" });
   const g = el("g", { class: "handle", tabindex: 0, role: "slider", "aria-label": "Threshold", "aria-valuemin": SMIN, "aria-valuemax": SMAX }, svg);
   el("rect", { x: -14, y: T - 30, width: 28, height: B - T + 36, fill: "transparent" }, g);
@@ -484,7 +499,7 @@ setTimeout(estimatePrecision, 50);
 if (!reduced) {   // one orchestrated moment: comments start Neutral, then settle into A1's lanes, then the personas take turns
   hero.nodes.forEach((n, i) => { n.style.transition = "none"; n.style.transform = `translate(${hero.x(HX[i]).toFixed(1)}px, ${heroY(i, "N").toFixed(1)}px)`; n.style.fill = "var(--field-dim)"; });
   hero.spot.style.transition = "none"; hero.spot.style.transform = `translate(${hero.x(HX[SPOT]).toFixed(1)}px, ${heroY(SPOT, "N").toFixed(1)}px)`;
-  requestAnimationFrame(() => requestAnimationFrame(() => setHero("A1")));
+  setTimeout(() => setHero("A1"), 80);   // a timer, not an animation frame: frames never fire in a background tab
   auto.t = setTimeout(autoNext, DWELL);
 }
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
