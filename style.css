@@ -202,6 +202,9 @@ textarea { font-family: var(--text); resize: vertical; line-height: 1.55; }
 
 .brief ol, .brief ul { padding-left: 22px; }
 .brief li { margin-bottom: 10px; }
+.brief .rqs { list-style: none; padding-left: 0; }
+.rqs li { display: grid; grid-template-columns: 48px 1fr; gap: 4px; margin-bottom: 16px; }
+.rq { font: 600 13px/2.1 var(--display); color: var(--muted); letter-spacing: .04em; }
 .findings-take a { font: 600 16px/1.4 var(--display); white-space: nowrap; }
 .notes ul { padding-left: 20px; font-size: 15px; color: var(--ink2); line-height: 1.6; }
 .notes li { margin-bottom: 6px; }

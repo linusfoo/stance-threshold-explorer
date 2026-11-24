@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <header class="hero" id="top">
@@ -138,13 +138,11 @@
   <h2>The paper in brief</h2>
   <p>Five annotators labelled the same 1,000 r/changemyview comments on nine topics. We checked how consistently each one labels, took their disagreement apart, and trained a model on each person's labels to see what it learns.</p>
   <h3>Main findings</h3>
-  <ol>
-    <li><b>Three of five annotators label consistently.</b> Avery, Jack and Michael (A1–A3) reverse the side of a stance on 1–3% of stance-taking comments; A4 and A5 do so on 17–20%. How well a model learns an annotator's labels does not show this on its own, because most labels are Neutral.</li>
-    <li><b>They disagree on whether a comment takes a stance, not on which side.</b> 93–97% of their disagreements are one annotator saying Neutral where the other sees a stance. In the paper's ordinal model, a different Neutral threshold explains 42–53% of the disagreement with the strictest annotator, Jack. Avery and Michael have nearly the same threshold; their disagreement falls on borderline comments, often about whether a related issue counts as the topic.</li>
-    <li><b>The threshold changes what a corpus seems to say.</b> On 4,500 further comments, labelled by a model trained on each annotator and corrected with prediction-powered inference, the average stance share is 44% under Avery, 24% under Jack and 47% under Michael. On minimum wage it is 53% under Avery and 19% under Jack. Economic topics look the most opinionated under Avery and the least under Jack.</li>
-    <li><b>Models learn the threshold, not every judgment.</b> A model trained on one annotator reproduces that annotator's topic stance shares with 87–91% topic-share accuracy, against 52% for another annotator's labels. It matches individual labels on 71–79% of comments, about as often as two annotators agree, and copies few side reversals (13–29%), even ones that follow a pattern in the text.</li>
-    <li><b>One cut-off goes a long way.</b> Moving only a zero-shot model's Neutral cut-off to an annotator's Neutral rate, using 100 of their labels, raised topic-share accuracy from 41% to 76%; label accuracy rose only from 60% to 68%. Moving all three annotators to a common Neutral rate raised their agreement (Fleiss' κ) from 0.50 to 0.61.</li>
-  </ol>
+  <ul class="rqs">
+    <li><span class="rq">RQ1</span><div><b>Three of five annotators label consistently.</b> Avery, Jack and Michael (A1–A3) reverse sides on 1–3% of stance-taking comments; A4 and A5 do so on 17–20%.</div></li>
+    <li><span class="rq">RQ2</span><div><b>Annotators disagree on whether a comment takes a stance.</b> 93–97% of disagreements are Neutral versus a stance. The threshold shifts corpus stance shares by up to 34 points.</div></li>
+    <li><span class="rq">RQ3</span><div><b>Models learn the threshold, not every label.</b> They reproduce topic stance shares far better (87–91% topic-share accuracy) than another annotator's labels do (52%), but copy few side reversals.</div></li>
+  </ul>
   <h3>Contributions</h3>
   <ol>
     <li><b>A multi-perspective dataset:</b> stance labels from five annotators on 1,000 r/changemyview comments across nine topics, shared as comment and thread IDs with the labels, without comment text, in line with Reddit's policy.</li>
