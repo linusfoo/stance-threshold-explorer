@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <header class="hero" id="top">
@@ -84,6 +84,7 @@
     <p>Applying your curve to the 1,000 annotated comments gives each topic's <b>stance share</b>, the share of comments that take a side.</p>
     <figure class="fig wide" id="fig-you-topics" aria-label="Stance share per topic for each annotator and you"></figure>
     <p class="caption">Avery, Jack and Michael from their own labels, you from your fitted curve. The paper's corpus estimates come from 4,500 further comments, labelled by models trained on each annotator and bias-corrected, so they differ somewhat.</p>
+    <p class="hint">Your threshold now also appears in sections 2, 3 and 4.</p>
     <button class="btn quiet" id="ann-again">Label a new set</button>
   </div>
 </section>
@@ -111,8 +112,12 @@
 <section id="playground">
   <h2><span class="n">3</span>Move the threshold</h2>
   <p>Here the language model does the labelling. Drag the line: comments to its right become a stance, on the side the model reads, and the rest become Neutral. See how opinionated each debate looks and how closely this one labeller matches each person.</p>
-  <div class="seg small" id="pg-snaps" role="group" aria-label="Move the line to"></div>
-  <figure class="fig wide" id="fig-ruler" aria-label="Comments by stance-strength score with a draggable threshold"></figure>
+  <div class="work">
+    <p class="ask">Drag the dark line along the chart, or jump to a threshold</p>
+    <div class="seg small" id="pg-snaps" role="group" aria-label="Move the line to"></div>
+    <figure class="fig" id="fig-ruler" aria-label="Comments by stance-strength score with a draggable threshold"></figure>
+  </div>
+  <p class="out-label">Updates as you move the line</p>
   <div class="stats" id="pg-stats"></div>
   <figure class="fig wide" id="fig-pg-topics" aria-label="Stance share per topic at the chosen threshold"></figure>
   <p class="caption" id="pg-caption"></p>
@@ -121,12 +126,18 @@
 <section id="toy">
   <h2><span class="n">4</span>Take disagreement apart</h2>
   <p>The paper's ordinal model gives every comment a hidden position from opposition to support. Each annotator sees that position with some <b>noise</b>, occasionally reads the side the <b>wrong way round</b>, and labels Neutral inside their own <b>band</b>. Set up two annotators and see how much of their disagreement each part explains.</p>
-  <div class="seg small" id="toy-presets" role="group" aria-label="Load the fitted pair"></div>
-  <figure class="fig wide" id="fig-toy-bands" aria-label="The two annotators' Neutral bands on the hidden scale"></figure>
-  <div class="toy-grid">
-    <div class="toy-controls" id="toy-x"></div>
-    <div class="toy-controls" id="toy-y"></div>
+  <div class="work">
+    <p class="ask">Start from a pair</p>
+    <div class="seg small" id="toy-presets" role="group" aria-label="Load the fitted pair"></div>
+  <p class="hint hidden" id="toy-you">Your band width comes from your threshold in section 1, read off the line through the three annotators' thresholds and bands. Your noise follows how sharp your curve is. Your band centre and side-reversal rate are set to the three annotators' average, because 10 to 40 labels cannot pin them down.</p>
+    <p class="ask toy-ask">Then adjust either annotator with the sliders</p>
+    <div class="toy-grid">
+      <div class="toy-controls" id="toy-x"></div>
+      <div class="toy-controls" id="toy-y"></div>
+    </div>
   </div>
+  <p class="out-label">Updates as you change the pair or the sliders</p>
+  <figure class="fig wide" id="fig-toy-bands" aria-label="The two annotators' Neutral bands on the hidden scale"></figure>
   <div class="toy-out">
     <figure class="fig" id="fig-toy-table" aria-label="Expected labels for 100 comments"></figure>
     <figure class="fig" id="fig-toy-split" aria-label="Disagreement split by cause"></figure>
@@ -171,6 +182,6 @@
 </main>
 <footer class="foot"><p>Companion to <i>Who Gets to Call It Neutral? Modeling Annotator Variation in Reddit Stance Labeling</i>, WebSci 2027 (anonymous submission). Avery, Jack and Michael are made-up names.</p><a href="#top">Back to top ↑</a></footer>
 <div class="tip hidden" id="tip" role="tooltip"></div>
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>

@@ -143,6 +143,10 @@ p { margin: 0 0 14px; }
 /* the working area of a step */
 .work { background: var(--wash); border: 1px solid var(--rule); border-radius: 12px; padding: 22px; margin: 22px 0 6px; }
 .ask { display: block; font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.toy-ask { margin-top: 20px; }
+.work .toy-grid { margin-top: 6px; }
+.out-label { font: 600 12px/1.4 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 26px 0 0; }
+@media (max-width: 640px) { .work { padding: 16px 14px; } }
 .btn { font-size: 15px; font-weight: 600; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 9px 18px; cursor: pointer; }
 .btn.go { background: var(--ink); color: var(--paper); margin-top: 12px; }
 .btn.go:hover { background: color-mix(in srgb, var(--ink) 85%, var(--a1)); }

@@ -222,6 +222,7 @@ function finishAnnotate() {
   ann.fit = fitCurve(s, y);
   $("ann-task").classList.add("hidden"); $("ann-result").classList.remove("hidden");
   renderVerdict(); drawCurves(); drawYouTopics(); if (typed.last) renderTyped(typed.last);
+  buildSnaps(); drawRuler(); buildPresets(); if (toy.names.includes("You")) { toy.y = youPar(); buildToyControls(); }
   $("ann-result").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
 }
 function renderVerdict() {
@@ -282,6 +283,7 @@ function topicChart(fig, series, opts = {}) {   // series: [{name, color, values
   });
   return svg;
 }
+const youNeutral = () => { let v = 0; for (let i = 0; i < NC; i++) v += sig(ann.fit.k * (C.s[i] - ann.fit.tau)); return 1 - v / NC; };
 function drawYouTopics() {
   const f = ann.fit, you = D.topics.map((_, t) => { let n = 0, v = 0; for (let i = 0; i < NC; i++) if (C.t[i] === t) { n++; v += sig(f.k * (C.s[i] - f.tau)); } return v / n; });
   ann.topicShare = you;
@@ -372,14 +374,15 @@ function drawRuler() {
   const top = Math.max(...bins.map(b => b.n)), h = n => (Math.sqrt(n) / Math.sqrt(top)) * (B - T);
   pg.bars = bins.map(b => el("rect", { x: x(b.lo) + 1, width: x(b.lo + 1) - x(b.lo) - 2, y: B - h(b.n), height: h(b.n), rx: 2 }, svg));
   pg.binLo = bins.map(b => b.lo);
-  A.forEach(a => el("line", { x1: x(TAU[a]), x2: x(TAU[a]), y1: B + 4, y2: B + 14, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg));
-  stackNames(svg, A.map(a => [a, TAU[a]]), x, B + 27, 15, L, R);
+  const gates = A.map(a => [a, TAU[a]]); if (ann.fit) gates.push(["You", ann.fit.tau]);
+  gates.forEach(([a, v]) => el("line", { x1: x(v), x2: x(v), y1: B + 4, y2: B + 14, "stroke-width": 3, style: `stroke:${COL[a]}` }, svg));
+  stackNames(svg, gates, x, B + 27, 15, L, R);
   txt(svg, L, H - 4, "← reads as Neutral", {}); txt(svg, R, H - 4, "reads as taking a side →", { "text-anchor": "end" });
   const g = el("g", { class: "handle", tabindex: 0, role: "slider", "aria-label": "Threshold", "aria-valuemin": SMIN, "aria-valuemax": SMAX }, svg);
   el("rect", { x: -14, y: T - 30, width: 28, height: B - T + 36, fill: "transparent" }, g);
-  el("line", { x1: 0, x2: 0, y1: T - 22, y2: B + 2, "stroke-width": 3, style: "stroke:var(--you)" }, g);
-  el("rect", { x: -26, y: T - 34, width: 52, height: 22, rx: 11, style: "fill:var(--you)" }, g);
-  pg.lab = txt(g, 0, T - 19, "", { "text-anchor": "middle", style: "fill:#fff", "font-weight": 600 });
+  el("line", { x1: 0, x2: 0, y1: T - 22, y2: B + 2, "stroke-width": 3, style: "stroke:var(--ink)" }, g);
+  el("rect", { x: -34, y: T - 34, width: 68, height: 22, rx: 11, style: "fill:var(--ink)" }, g);
+  pg.lab = txt(g, 0, T - 19, "", { "text-anchor": "middle", style: "fill:var(--paper)", "font-weight": 600 });
   pg.handle = g; pg.x = x;
   let drag = false;
   const set = ev => { const b = svg.getBoundingClientRect(); setCut(Math.round(inv(((ev.clientX - b.left) / b.width) * W) * 2) / 2); };
@@ -397,18 +400,22 @@ function setCut(v, init) {
   pg.cut = Math.max(SMIN, Math.min(SMAX, v));
   pg.handle.setAttribute("transform", `translate(${pg.x(pg.cut)},0)`);
   pg.handle.setAttribute("aria-valuenow", pg.cut); pg.handle.setAttribute("aria-valuetext", `threshold ${fmt(pg.cut)}`);
-  pg.lab.textContent = fmt(pg.cut);
+  pg.lab.textContent = `‹ ${fmt(pg.cut)} ›`;
   pg.bars.forEach((b, i) => { b.style.fill = pg.binLo[i] + 0.5 >= pg.cut ? "var(--model)" : "var(--neutral)"; });
   [...$("pg-snaps").children].forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.v - pg.cut) < 0.26));
   const lab = modelLab(pg.cut), share = topicShare(lab), neu = lab.filter(l => l === "N").length / NC;
-  $("pg-stats").innerHTML = `<div class="stat"><div class="k">Labelled Neutral</div><div class="v">${pct(neu)}</div><div class="sub">${A.map(a => `${nm(a)} ${pct(1 - STANCE[a])}`).join(", ")}</div></div>` +
+  $("pg-stats").innerHTML = `<div class="stat"><div class="k">Labelled Neutral</div><div class="v">${pct(neu)}</div><div class="sub">${A.map(a => `${nm(a)} ${pct(1 - STANCE[a])}`).join(", ")}${ann.fit ? `, you about ${pct(youNeutral())}` : ""}</div></div>` +
     A.map(a => { let ok = 0; for (let i = 0; i < NC; i++) if (lab[i] === C[a][i]) ok++; return `<div class="stat"><div class="k"><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COL[a]}"></span>Matches ${nm(a)}</div><div class="v">${pct(ok / NC)}</div><div class="sub">κ = ${kappa(lab, [...C[a]]).toFixed(2)}</div></div>`; }).join("");
-  topicChart($("fig-pg-topics"), A.map(a => ({ name: nm(a), color: COL[a], values: SHARE[a], shape: "tick" })), { bars: share, barColor: "var(--neutral)" });
+  const ser = A.map(a => ({ name: nm(a), color: COL[a], values: SHARE[a], shape: "tick" }));
+  if (ann.fit && ann.topicShare) ser.push({ name: "You", color: COL.You, values: ann.topicShare, shape: "diamond" });
+  topicChart($("fig-pg-topics"), ser, { bars: share, barColor: "var(--neutral)" });
   const mw = D.topics.findIndex(t => t.key === "minimum_wage"), sv = D.topics.findIndex(t => t.key === "surveillance");
-  $("pg-caption").textContent = `Grey bars: each topic's stance share with the line at ${fmt(pg.cut)}. Coloured ticks: each annotator's own stance share. At this line ${pct(share[mw])} of the minimum wage comments and ${pct(share[sv])} of the mass surveillance comments take a side.`;
+  $("pg-caption").textContent = `Grey bars: each topic's stance share with the line at ${fmt(pg.cut)}. Coloured ticks: each annotator's own stance share.${ann.fit ? " Pink diamonds: your stance share from your curve in section 1." : ""} At this line ${pct(share[mw])} of the minimum wage comments and ${pct(share[sv])} of the mass surveillance comments take a side.`;
 }
 function buildSnaps() {
-  const items = [...A.map(a => ({ v: TAU[a], label: `${nm(a)}'s threshold`, color: COL[a] })), { v: 0, label: "Model's own default" }];
+  const items = [...A.map(a => ({ v: TAU[a], label: `${nm(a)}'s threshold`, color: COL[a] }))];
+  if (ann.fit) items.push({ v: ann.fit.tau, label: "Your threshold", color: COL.You });
+  items.push({ v: 0, label: "Model's own default" });
   $("pg-snaps").innerHTML = "";
   for (const it of items) {
     const b = document.createElement("button"); b.type = "button"; b.dataset.v = it.v;
@@ -423,7 +430,18 @@ const GRID = makeGrid(D.topics.map(t => D.ordinal.topic_mean[t.key]), cnt.map(c 
 const OA = D.ordinal.annotators;
 const toPar = o => ({ width: +(o.c2 - o.c1).toFixed(2), centre: +((o.c1 + o.c2) / 2).toFixed(2), noise: +o.noise.toFixed(2), pi: +o.pi.toFixed(3) });
 const PRESETS = [["A1", "A2"], ["A1", "A3"], ["A2", "A3"]];
-const toy = { names: ["A1", "A2"], x: toPar(OA.A1), y: toPar(OA.A2) };
+const toy = { names: ["A1", "A2"], x: toPar(OA.A1), y: toPar(OA.A2), preset: "A1-A2" };
+// The visitor has a threshold and sharpness on the stance-strength score, not ordinal-model parameters. Band width: the straight
+// line through A1-A3's (threshold, band width) pairs. Centre and side-reversal rate: A1-A3's average, since 10-40 labels cannot
+// estimate them. Noise: A1-A3's average, scaled by how much flatter or sharper the visitor's curve is than theirs.
+const mean = xs => xs.reduce((s, v) => s + v, 0) / xs.length;
+function youPar() {
+  const ws = A.map(a => OA[a].c2 - OA[a].c1), ts = A.map(a => TAU[a]), mt = mean(ts), mw = mean(ws);
+  const slope = A.reduce((s, _, i) => s + (ts[i] - mt) * (ws[i] - mw), 0) / A.reduce((s, _, i) => s + (ts[i] - mt) ** 2, 0);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v)), mb = mean(A.map(a => D.curves[a].b));
+  return { width: +clamp(mw + slope * (ann.fit.tau - mt), 0.2, 4).toFixed(2), centre: +mean(A.map(a => (OA[a].c1 + OA[a].c2) / 2)).toFixed(2),
+    noise: +clamp(mean(A.map(a => OA[a].noise)) * mb / ann.fit.k, 0.05, 1.2).toFixed(2), pi: +mean(A.map(a => OA[a].pi)).toFixed(3) };
+}
 const SL = [["width", "Neutral band width", 0.2, 4, 0.05, v => v.toFixed(2)], ["centre", "Band centre", -1.5, 1.5, 0.05, v => fmt(v)],
   ["noise", "Noise", 0.02, 1.2, 0.01, v => v.toFixed(2)], ["pi", "Reads the side reversed", 0, 0.3, 0.005, v => pct(v)]];
 function buildToyControls() {
@@ -486,11 +504,14 @@ function renderToy() {
 }
 function buildPresets() {
   const items = PRESETS.map(([a, b]) => ({ value: `${a}-${b}`, label: `${nm(a)} and ${nm(b)}` })).concat([{ value: "same", label: "Same band, noise only" }]);
-  radio($("toy-presets"), items, "A1-A2", v => {
+  if (ann.fit) items.push(...A.map(a => ({ value: `${a}-You`, label: `${nm(a)} and you` })));
+  radio($("toy-presets"), items, toy.preset, v => {
+    toy.preset = v;
     if (v === "same") { toy.names = ["A1", "A3"]; toy.x = toPar(OA.A1); toy.y = { ...toPar(OA.A1) }; }
-    else { const [a, b] = v.split("-"); toy.names = [a, b]; toy.x = toPar(OA[a]); toy.y = toPar(OA[b]); }
+    else { const [a, b] = v.split("-"); toy.names = [a, b]; toy.x = toPar(OA[a]); toy.y = b === "You" ? youPar() : toPar(OA[b]); }
     buildToyControls();
   });
+  $("toy-you").classList.toggle("hidden", !ann.fit);
 }
 
 /* ---------------- boot ---------------- */
