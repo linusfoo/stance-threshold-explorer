@@ -187,7 +187,7 @@ function renderNChoice() {
 function updatePrecisionHint() {
   const p = precision[ann.n];
   $("ann-precision").textContent = p == null ? "More comments give a more precise estimate of your threshold."
-    : `With ${ann.n} comments your threshold is typically pinned down to within about ±${p.toFixed(0)} on the ruler, where ${nm("A2")} and ${nm("A3")} sit 14 apart. More comments make it more precise.`;
+    : `With ${ann.n} comments your threshold is typically pinned down to within about ±${p.toFixed(0)} on the stance-strength score, where ${nm("A2")} and ${nm("A3")} sit 14 apart. More comments make it more precise.`;
 }
 function startAnnotate() {
   ann.items = pickItems(ann.n, rng(Date.now() % 100000)); ann.labels = []; ann.i = 0;
@@ -254,11 +254,11 @@ function drawCurves() {
     const st = ann.labels[i] !== "N", cy = st ? T - 2 - r() * 10 : B + 2 + r() * 10;
     const c = el("circle", { cx: x(it.s), cy, r: 5, style: st ? `fill:${COL.You}` : `fill:var(--paper);stroke:${COL.You};stroke-width:2`, tabindex: 0 }, svg);
     const lab = { S: "Support", N: "Neutral", O: "Oppose" }[ann.labels[i]];
-    const html = `<b>You: ${lab}</b> · ruler ${fmt(it.s)}<br>${esc(it.text.slice(0, 160))}${it.text.length > 160 ? "…" : ""}`;
+    const html = `<b>You: ${lab}</b> · score ${fmt(it.s)}<br>${esc(it.text.slice(0, 160))}${it.text.length > 160 ? "…" : ""}`;
     c.onmouseenter = ev => showTip(ev, html); c.onmousemove = moveTip; c.onmouseleave = hideTip;
     c.onfocus = () => { const b = c.getBoundingClientRect(); showTip({ clientX: b.right, clientY: b.bottom }, html); }; c.onblur = hideTip;
   });
-  axisX(svg, x, B + 14, [-20, -10, 0, 10, 20], "Ruler score: how strongly the model reads a side", W);
+  axisX(svg, x, B + 14, [-20, -10, 0, 10, 20], "Stance-strength score: how clearly the model reads a stance", W);
 }
 function topicChart(fig, series, opts = {}) {   // series: [{name, color, values[9], shape}] ; optional bars: values[9]
   const rowH = 26, gH = 22, H = 24 + D.topics.length * rowH + 3 * gH + 30, [svg, W] = canvas(fig, H);
