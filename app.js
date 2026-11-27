@@ -96,7 +96,7 @@ function drawHero() {
   const g = el("g", {}, svg);
   hero.nodes = C.s.map((s, i) => el("circle", { class: "c", r: W < 500 ? 1.9 : 2.4, cx: 0, cy: 0 }, g));
   const sg = el("g", { class: "spot-ring" }, svg);
-  el("circle", { r: 7.5, class: "spot-pulse" }, sg); el("circle", { r: 7.5, fill: "none", stroke: "var(--field-ink)", "stroke-width": 2 }, sg);
+  el("circle", { r: 7.5, fill: "none", stroke: "var(--field-ink)", "stroke-width": 2 }, sg);
   hero.spot = sg;
   hero.x = x; hero.lanes = lanes; hero.L = L; hero.R = R;
   setHero(hero.who, true);
@@ -126,23 +126,18 @@ function setHero(who, instant) {
     <span class="chips">${A.map(a => `<span class="chip${a === who ? " on" : ""}" style="--c:${COL[a]}"><span class="sw"></span>${nm(a)}: <b>${LANE[C[a][SPOT]]}</b></span>`).join("")}</span>`;
   for (const b of $("hero-who").children) {
     b.setAttribute("aria-checked", String(b.dataset.a === who)); b.tabIndex = b.dataset.a === who ? 0 : -1;
-    if (b.dataset.a === who) { const t = b.querySelector(".pc-tick"), t2 = t.cloneNode(); t.replaceWith(t2); }   // restart the dwell bar
   }
 }
-// persona cards; they take turns on their own until someone picks one
-const DWELL = 5200, auto = { on: !reduced, t: 0, seen: true };
-function stopAuto() { auto.on = false; clearTimeout(auto.t); $("hero-who").classList.remove("auto"); }
-function autoNext() { if (!auto.on) return; if (auto.seen) setHero(A[(A.indexOf(hero.who) + 1) % A.length]); auto.t = setTimeout(autoNext, DWELL); }
 function buildPersonaCards() {
-  const box = $("hero-who"); box.innerHTML = ""; box.style.setProperty("--dwell", DWELL + "ms");
+  const box = $("hero-who"); box.innerHTML = "";
   for (const a of A) {
     const share = k => [...C[a]].filter(l => l === k).length / NC;
     const b = document.createElement("button");
     b.type = "button"; b.className = "pcard"; b.dataset.a = a; b.setAttribute("role", "radio"); b.style.setProperty("--c", COL[a]);
     b.innerHTML = `<span class="pc-name"><span class="sw"></span>${nm(a)}</span><span class="pc-tag">${TAG[a]}</span>
       <span class="pc-bar" title="Support, Neutral, Oppose"><i style="flex:${share("S")}"></i><i class="n" style="flex:${share("N")}"></i><i style="flex:${share("O")}"></i></span>
-      <span class="pc-num"><b>${pct(STANCE[a])}</b> take a side<span class="thr"> · threshold ${fmt(TAU[a])}</span></span><span class="pc-tick"></span>`;
-    b.onclick = () => { stopAuto(); setHero(a); };
+      <span class="pc-num"><b>${pct(STANCE[a])}</b> <span class="lbl">take a side</span><span class="thr"> · threshold ${fmt(TAU[a])}</span></span>`;
+    b.onclick = () => setHero(a);
     box.appendChild(b);
   }
   box.onkeydown = ev => {   // arrow keys move within the group
@@ -150,11 +145,9 @@ function buildPersonaCards() {
     const bs = [...box.children], i = bs.indexOf(document.activeElement); if (i < 0) return;
     const j = (i + (ev.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length; bs[j].focus(); bs[j].click(); ev.preventDefault();
   };
-  if (auto.on) box.classList.add("auto");
 }
 buildPersonaCards();
 $("loading").classList.add("hidden");
-new IntersectionObserver(es => { auto.seen = es[0].isIntersecting; }).observe($("fig-hero"));
 
 /* ---------------- 1. be the annotator ---------------- */
 const PARA = [...D.paraphrases].sort((a, b) => a.s - b.s);
@@ -381,7 +374,8 @@ function drawRuler() {
   const g = el("g", { class: "handle", tabindex: 0, role: "slider", "aria-label": "Threshold", "aria-valuemin": SMIN, "aria-valuemax": SMAX }, svg);
   el("rect", { x: -14, y: T - 30, width: 28, height: B - T + 36, fill: "transparent" }, g);
   el("line", { x1: 0, x2: 0, y1: T - 22, y2: B + 2, "stroke-width": 3, style: "stroke:var(--ink)" }, g);
-  el("rect", { x: -34, y: T - 34, width: 68, height: 22, rx: 11, style: "fill:var(--ink)" }, g);
+  el("rect", { x: -34, y: T - 34, width: 68, height: 22, rx: 6, style: "fill:var(--ink)" }, g);
+  el("rect", { class: "hring", x: -38, y: T - 38, width: 76, height: 30, rx: 9 }, g);
   pg.lab = txt(g, 0, T - 19, "", { "text-anchor": "middle", style: "fill:var(--paper)", "font-weight": 600 });
   pg.handle = g; pg.x = x;
   let drag = false;
@@ -448,7 +442,7 @@ function buildToyControls() {
   for (const [key, side] of [["x", 0], ["y", 1]]) {
     const box = $(key === "x" ? "toy-x" : "toy-y"), name = toy.names[side], c = COL[name];
     box.style.setProperty("--c", c);
-    box.innerHTML = `<h4><span class="sw"></span>${nm(name)}</h4>` + SL.map(([k, lab, mn, mx, st]) => `<label class="slider"><span>${lab}</span><output id="o-${key}-${k}"></output>
+    box.innerHTML = `<h3><span class="sw"></span>${nm(name)}</h3>` + SL.map(([k, lab, mn, mx, st]) => `<label class="slider"><span>${lab}</span><output id="o-${key}-${k}"></output>
       <input type="range" min="${mn}" max="${mx}" step="${st}" value="${toy[key][k]}" data-k="${k}" aria-label="${nm(name)} ${lab}"></label>`).join("");
     box.querySelectorAll("input").forEach(inp => (inp.oninput = () => { toy[key][inp.dataset.k] = +inp.value; scheduleToy(); }));
   }
@@ -461,16 +455,16 @@ function renderToy() {
   for (const key of ["x", "y"]) for (const [k, , , , , f] of SL) $(`o-${key}-${k}`).textContent = f(toy[key][k]);
   const px = fromPar(toy.x), py = fromPar(toy.y), M = table(GRID, px, py), sp = shapley(GRID, px, py);
   // bands on the hidden scale
-  { const fig = $("fig-toy-bands"), H = 150, [svg, W] = canvas(fig, H), L = 60, R = W - 10, x = v => L + ((v + 3) / 6) * (R - L);
+  { const fig = $("fig-toy-bands"), narrow = (fig.clientWidth || 720) < 520, off = narrow ? 18 : 0, H = 150 + off, [svg, W] = canvas(fig, H), L = 60, R = W - 10, x = v => L + ((v + 3) / 6) * (R - L);
     const dens = GRID.th.map((t, i) => [t, GRID.w[i]]).filter(([t], i) => t >= -3 && t <= 3 && i % 10 === 0), top = Math.max(...dens.map(d => d[1]));
     el("path", { d: "M" + dens.map(([t, w]) => `${x(t).toFixed(1)},${(44 - (w / top) * 34).toFixed(1)}`).join("L"), fill: "none", stroke: "var(--muted)", "stroke-width": 1.5 }, svg);
-    txt(svg, L, 56, "← opposes", {}); txt(svg, R, 56, "supports →", { "text-anchor": "end" }); txt(svg, (L + R) / 2, 56, "hidden position of a comment", { "text-anchor": "middle" });
-    [[px, toy.names[0], 80], [py, toy.names[1], 118]].forEach(([p, n, y]) => {
+    txt(svg, L, 56, "← opposes", {}); txt(svg, R, 56, "supports →", { "text-anchor": "end" }); txt(svg, (L + R) / 2, narrow ? 74 : 56, "hidden position of a comment", { "text-anchor": "middle" });
+    [[px, toy.names[0], 80 + off], [py, toy.names[1], 118 + off]].forEach(([p, n, y]) => {
       txt(svg, 0, y + 5, nm(n), { "font-weight": 600, style: `fill:${COL[n]}` });
       el("line", { x1: L, x2: R, y1: y, y2: y, stroke: "var(--rule)", "stroke-width": 8, "stroke-linecap": "round" }, svg);
       const a = Math.max(-3, p.c1), b = Math.min(3, p.c2);
-      el("rect", { x: x(a), y: y - 9, width: Math.max(0, x(b) - x(a)), height: 18, rx: 9, style: `fill:${COL[n]}`, opacity: 0.85 }, svg);
-      txt(svg, (x(a) + x(b)) / 2, y + 4, "Neutral", { "text-anchor": "middle", style: "fill:#fff", "font-weight": 600 });
+      el("rect", { x: x(a), y: y - 9, width: Math.max(0, x(b) - x(a)), height: 18, rx: 9, style: `fill:${COL[n]}`, }, svg);
+      txt(svg, (x(a) + x(b)) / 2, y + 4, "Neutral", { "text-anchor": "middle", class: "on-c", "font-weight": 600 });
     }); }
   // table
   { const fig = $("fig-toy-table"), cs0 = Math.min(64, ((fig.clientWidth || 300) - 70) / 3), [svg, W] = canvas(fig, 40 + 3 * cs0 + 34, 240), cs = Math.min(64, (W - 70) / 3), L = 60, T = 40, labs = ["Oppose", "Neutral", "Support"];
@@ -517,12 +511,6 @@ function buildPresets() {
 /* ---------------- boot ---------------- */
 drawHero(); buildSnaps(); drawRuler(); buildPresets(); buildToyControls(); renderNChoice();
 setTimeout(estimatePrecision, 50);
-if (!reduced) {   // one orchestrated moment: comments start Neutral, then settle into A1's lanes, then the personas take turns
-  hero.nodes.forEach((n, i) => { n.style.transition = "none"; n.style.transform = `translate(${hero.x(HX[i]).toFixed(1)}px, ${heroY(i, "N").toFixed(1)}px)`; n.style.fill = "var(--field-dim)"; });
-  hero.spot.style.transition = "none"; hero.spot.style.transform = `translate(${hero.x(HX[SPOT]).toFixed(1)}px, ${heroY(SPOT, "N").toFixed(1)}px)`;
-  setTimeout(() => setHero("A1"), 80);   // a timer, not an animation frame: frames never fire in a background tab
-  auto.t = setTimeout(autoNext, DWELL);
-}
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => {
   drawHero(); drawRuler(); renderToy(); if (ann.fit && !$("ann-result").classList.contains("hidden")) { drawCurves(); drawYouTopics(); } if (typed.last) renderTyped(typed.last);
 }, 150); });

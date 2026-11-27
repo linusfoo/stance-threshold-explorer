@@ -5,18 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stance Threshold Explorer</title>
 <meta name="description" content="Interactive companion to 'Who Gets to Call It Neutral? Modeling Annotator Variation in Reddit Stance Labeling': how an annotator's Neutral threshold changes stance labels and the conclusions drawn from them.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Who gets to call it Neutral? Stance Threshold Explorer">
+<meta property="og:description" content="Three people labelled the same 1,000 Reddit comments. See where each one stops saying Neutral, find your own threshold, and watch nine debates change with it.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23161b26'/%3E%3Cpath d='M19 5v22' stroke='%23fff' stroke-width='3'/%3E%3Ccircle cx='9' cy='11' r='2.5' fill='%23858e9f'/%3E%3Ccircle cx='11' cy='21' r='2.5' fill='%23858e9f'/%3E%3Ccircle cx='26' cy='15' r='2.5' fill='%235aa2f0'/%3E%3C/svg%3E">
+<script>
+  // set the saved colour theme before the first paint; "js" lets the stylesheet collapse the phone menu only when scripts run
+  (function () { var d = document.documentElement; d.classList.add("js"); try { var t = localStorage.getItem("ste-theme"); if (t === "light" || t === "dark") d.dataset.theme = t; } catch (e) {} })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
-<header class="hero" id="top">
+<a class="skip" href="#main">Skip to the content</a>
+<header class="bar">
+  <div class="bar-in">
+    <a class="bar-title" href="#top">Stance Threshold Explorer</a>
+    <button class="bar-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="bar-nav">Sections</button>
+    <nav class="bar-nav" id="bar-nav" aria-label="Page">
+      <a href="#annotate">1 Label</a>
+      <a href="#typed">2 Score</a>
+      <a href="#playground">3 Threshold</a>
+      <a href="#toy">4 Take apart</a>
+      <a href="#paper">Paper</a>
+      <a href="#notes">Data</a>
+    </nav>
+    <button class="bar-btn" id="theme-btn" type="button">Theme: auto</button>
+  </div>
+</header>
+
+<main id="main">
+<div class="hero" id="top">
   <div class="hero-text">
     <p class="kicker">Interactive companion to a WebSci 2027 paper</p>
     <h1>Who gets to call it Neutral?</h1>
     <p class="lede">Three people labelled the same 1,000 comments from Reddit's r/changemyview as supporting, opposing or neutral towards a topic. When two of them both see a stance, they pick the same side 94 to 96% of the time. What they disagree on is how much a comment has to say before it stops being Neutral.</p>
-    <p class="lede-note">Avery, Jack and Michael are made-up names for the paper's annotators A1, A2 and A3.</p>
   </div>
   <div class="hero-stage">
     <p class="stage-ask"><span class="fig-n">Figure 1.</span>Pick an annotator to see how they labelled the same 1,000 comments.</p>
@@ -34,28 +60,22 @@
       <div class="spot" id="hero-spot"></div>
     </div>
   </div>
-  <p class="hero-note">The AI model's score is zero-shot Qwen3-14B. Scores are capped at both ends, so the clearest comments are spread across the last step.</p>
+  <p class="hero-note">Avery, Jack and Michael are made-up names for the paper's annotators A1, A2 and A3. The AI model's score is zero-shot Qwen3-14B. Scores are capped at both ends, so the clearest comments are spread across the last step.</p>
   <div class="hero-cta">
-    <a class="cta" href="#annotate">Find your own threshold <span aria-hidden="true">→</span></a>
+    <a class="cta" href="#annotate">Find your own threshold</a>
     <span class="cta-note">Label 10 to 40 comments and see where your threshold falls.</span>
   </div>
-</header>
-
-<main>
-<div class="findings" aria-label="Key findings">
-  <div class="finding"><div class="fv">94–96%</div><p>of the time, two annotators who both see a stance pick the <b>same side</b>.</p></div>
-  <div class="finding"><div class="fv">42–53%</div><p>of the disagreement with the strictest annotator comes from a different <b>Neutral threshold</b>.</p></div>
-  <div class="finding"><div class="fv">53% <small>vs</small> 19%</div><p>of the minimum wage debate takes a side across 4,500 comments, depending on <b>whose labels</b> the model learned.</p></div>
 </div>
-<p class="findings-take">The disagreement is not about <i>which side</i> a comment takes. It is about <i>how much</i> it has to say before it counts, and that threshold changes what a whole corpus seems to say. <a href="#paper">The paper's findings and contributions ↓</a></p>
-<nav class="steps" aria-label="Sections">
+
+<p class="take">The disagreement is not about <i>which side</i> a comment takes. It is about <i>how much</i> it has to say before it counts, and that threshold changes what a whole corpus seems to say. <a href="#paper">Read the paper's findings and contributions</a></p>
+<nav class="steps" aria-label="The four steps">
   <a href="#annotate"><b>1</b><span>Label comments yourself</span><small>Find your own threshold</small></a>
   <a href="#typed"><b>2</b><span>Score your own comment</span><small>A model runs in your browser</small></a>
   <a href="#playground"><b>3</b><span>Move the threshold</span><small>Watch nine debates change</small></a>
   <a href="#toy"><b>4</b><span>Take disagreement apart</span><small>Threshold, reversal or noise</small></a>
 </nav>
 
-<section id="annotate">
+<section id="annotate" data-step style="--step: 1">
   <h2><span class="n">1</span>Label comments yourself</h2>
   <p>You get the same task the annotators had. Each comment is a paraphrase of a real one. Choose <b>Support</b> or <b>Oppose</b> if its author takes a side on the topic shown, and <b>Neutral</b> if they don't, including when they only argue a side point. Your labels place your own threshold among theirs.</p>
   <div class="work" id="ann-setup">
@@ -89,7 +109,7 @@
   </div>
 </section>
 
-<section id="typed">
+<section id="typed" data-step style="--step: 2">
   <h2><span class="n">2</span>Score your own comment</h2>
   <p>Write a comment on one of the nine topics. A model running in your browser scores it, and you see which side of each annotator's threshold it falls on.</p>
   <div class="work">
@@ -109,7 +129,7 @@
   </div>
 </section>
 
-<section id="playground">
+<section id="playground" data-step style="--step: 3">
   <h2><span class="n">3</span>Move the threshold</h2>
   <p>Here the language model does the labelling. Drag the line: comments to its right become a stance, on the side the model reads, and the rest become Neutral. See how opinionated each debate looks and how closely this one labeller matches each person.</p>
   <div class="work">
@@ -123,13 +143,13 @@
   <p class="caption" id="pg-caption"></p>
 </section>
 
-<section id="toy">
+<section id="toy" data-step style="--step: 4">
   <h2><span class="n">4</span>Take disagreement apart</h2>
   <p>The paper's ordinal model gives every comment a hidden position from opposition to support. Each annotator sees that position with some <b>noise</b>, occasionally reads the side the <b>wrong way round</b>, and labels Neutral inside their own <b>band</b>. Set up two annotators and see how much of their disagreement each part explains.</p>
   <div class="work">
     <p class="ask">Start from a pair</p>
     <div class="seg small" id="toy-presets" role="group" aria-label="Load the fitted pair"></div>
-  <p class="hint hidden" id="toy-you">Your band width comes from your threshold in section 1, read off the line through the three annotators' thresholds and bands. Your noise follows how sharp your curve is. Your band centre and side-reversal rate are set to the three annotators' average, because 10 to 40 labels cannot pin them down.</p>
+    <p class="hint hidden" id="toy-you">Your band width comes from your threshold in section 1, read off the line through the three annotators' thresholds and bands. Your noise follows how sharp your curve is. Your band centre and side-reversal rate are set to the three annotators' average, because 10 to 40 labels cannot pin them down.</p>
     <p class="ask toy-ask">Then adjust either annotator with the sliders</p>
     <div class="toy-grid">
       <div class="toy-controls" id="toy-x"></div>
@@ -151,7 +171,7 @@
   <h3>Main findings</h3>
   <ul class="rqs">
     <li><span class="rq">RQ1</span><div><b>Three of five annotators label consistently.</b> Avery, Jack and Michael (A1–A3) reverse sides on 1–3% of stance-taking comments; A4 and A5 do so on 17–20%.</div></li>
-    <li><span class="rq">RQ2</span><div><b>Annotators disagree on whether a comment takes a stance.</b> 93–97% of disagreements are Neutral versus a stance. The threshold shifts corpus stance shares by up to 34 points.</div></li>
+    <li><span class="rq">RQ2</span><div><b>Annotators disagree on whether a comment takes a stance.</b> 93–97% of disagreements are Neutral versus a stance. Where the strictest annotator is involved, a different Neutral threshold explains 42–53% of the disagreement. The threshold shifts corpus stance shares by up to 34 points: 53% of the minimum wage debate takes a side under one annotator's labels and 19% under another's.</div></li>
     <li><span class="rq">RQ3</span><div><b>Models learn the threshold, not every label.</b> They reproduce topic stance shares far better (87–91% topic-share accuracy) than another annotator's labels do (52%), but copy few side reversals.</div></li>
   </ul>
   <h3>Contributions</h3>
@@ -173,15 +193,16 @@
 <section id="notes" class="notes">
   <h2>About the data</h2>
   <ul>
-    <li>1,000 comments on nine topics in three genres, each labelled by annotators A1, A2 and A3, shown here under the made-up names Avery, Jack and Michael. This page holds each comment's topic, stance-strength score, the side the model reads and the three labels, and no comment text.</li>
+    <li>1,000 comments on nine topics in three genres, each labelled by annotators A1, A2 and A3. This page holds each comment's topic, stance-strength score, the side the model reads and the three labels, and no comment text.</li>
     <li>The stance-strength score comes from zero-shot Qwen3-14B: how much more likely it finds a stance than Neutral, log P(stance) minus log P(Neutral), capped near ±21.</li>
     <li>The comments in section 1 are paraphrases written for this page and scored by the same model.</li>
     <li>Topic shares on this page describe the annotated comments. The paper's corpus estimates use annotator-specific models and prediction-powered inference on 4,500 further comments.</li>
   </ul>
 </section>
 </main>
-<footer class="foot"><p>Companion to <i>Who Gets to Call It Neutral? Modeling Annotator Variation in Reddit Stance Labeling</i>, WebSci 2027 (anonymous submission). Avery, Jack and Michael are made-up names.</p><a href="#top">Back to top ↑</a></footer>
+<footer class="foot"><p>Companion to <i>Who Gets to Call It Neutral? Modeling Annotator Variation in Reddit Stance Labeling</i>, WebSci 2027 (anonymous submission).</p><a href="#top">Back to top</a></footer>
 <div class="tip hidden" id="tip" role="tooltip"></div>
-<script type="module" src="app.js?v=6"></script>
+<script src="ui.js?v=1" defer></script>
+<script type="module" src="app.js?v=7"></script>
 </body>
 </html>
